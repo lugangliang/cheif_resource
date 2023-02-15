@@ -1,0 +1,141 @@
+# ingress配置
+1、添加注解nginx.ingress.kubernetes.io/backend-protocol
+2、添加tls配置，直接使用kubevirt-exportproxy-certs即可
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx-ingress-controller
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+  labels:
+    ic-name: nginx-ingress-controller
+    kubernetes.io/ingress.class: nginx-ingress-controller
+  name: exportvm
+  namespace: kubevirt
+spec:
+  rules:
+  - host: kubevirt.exportvm.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: virt-exportproxy
+            port:
+              number: 443
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - kubevirt.exportvm.com
+    secretName: kubevirt-exportproxy-certs
+	
+
+# configmap配置
+apiVersion: v1
+data:
+  Dockerfile: |
+    FROM scratch
+    ADD --chown=107:107 disk.img /disk/
+kind: ConfigMap
+metadata:
+  name: exportvm
+  namespace: cicd
+
+
+# jekins配置
+使用Groovy沙盒进行构建
+
+downloadUrl  https://kubevirt.exportvm.com/api/export.kubevirt.io/v1alpha1/namespaces/default/virtualmachineexports/example-export/volumes/lugl-cirros-sysdisk/disk.img.gz
+imageUrl     10.10.95.6:8443/k8s-deploy/vmimage:centos7
+
+import static java.util.UUID.randomUUID
+def uuid
+def label
+def dateTime = new Date().format('yyyyMMddHHmmss')
+try{
+uuid = randomUUID() as String
+label = uuid.take(8)
+podTemplate(
+    containers: [
+        containerTemplate(
+            alwaysPullImage: true,
+            args: '',
+            command: '',
+            envVars: [
+                containerEnvVar(key: 'GIT_SSL_NO_VERIFY', value: 'true')
+                ,containerEnvVar(key: 'DOCKER_DAEMON_ARGS', value: ' --insecure-registry=10.10.95.6:8443')
+                
+            ],
+            image: '10.10.95.6:8443/official-website/jenkins-java-cci:2.0',
+            name: 'jnlp',
+            privileged: true,
+            resourceLimitCpu: '',
+            resourceLimitMemory: '',
+            resourceRequestCpu: '',
+            resourceRequestMemory: '',
+            ttyEnabled: true,
+            workingDir: '/home'
+        )
+    ],
+    inheritFrom: '',
+    label: "build-${label}",
+    name: "build-${label}",
+    serviceAccount: '',
+    volumes: [
+        configMapVolume(configMapName: 'exportvm', mountPath: '/opt/dockerfile3')
+    ,
+        hostPathVolume(hostPath: '/var/run/docker.sock', mountPath: '/var/run/docker.sock'),
+    ],
+    imagePullSecrets: ['harbor-secret'],
+    workingDir: '/home/build',
+    workspaceVolume: emptyDirWorkspaceVolume(false)
+) {
+
+    node("build-${label}"){
+        stage('创建镜像-3'){
+            sh "docker login 10.10.95.6:8443 --username=admin --password=Harbor12345"
+            sh "echo \"10.10.95.12  kubevirt.exportvm.com \" >>/etc/hosts"
+			sh "curl -H \"x-kubevirt-export-token:1234567890ab\" $downloadUrl -o disk.img -k"
+            sh "cp -r /opt/dockerfile3 ./dockerfile@tmp3"
+            sh "docker build --network=host --no-cache  -f dockerfile@tmp3/Dockerfile -t $imageUrl ."
+            sh "docker push $imageUrl"
+        }
+    }
+}
+}finally{
+}
+
+# 代码修改
+修改kubevirt代码，使得可以打开dev下的设备
+pkg/storage/export/export/export.go
+	podManifest.Spec.SecurityContext = &corev1.PodSecurityContext{
+		RunAsNonRoot: pointer.Bool(false),
+		RunAsGroup:   pointer.Int64Ptr(kvm),
+		FSGroup:      pointer.Int64Ptr(kvm),
+		RunAsUser:    pointer.Int64(0),
+	}
+	
+
+# 测试
+
+ curl -H "x-kubevirt-export-token:1234567890ab" https://kubevirt.exportvm.com/api/export.kubevirt.io/v1alpha1/namespaces/default/virtualmachineexports/example-export/volumes/lugl-cirros-sysdisk/disk.img.gz -o disk.img -k
+ 
+ 
+ curl  -H 'x-kubevirt-export-token:1234567890ab'  https://virt-export-example-export.default.svc/volumes/lugl-cirros-sysdisk/disk.img -k -o disk.img
+
+
+cat <<EOF > Dockefile
+FROM scratch
+ADD --chown=107:107 disk.img /disk/
+EOF
+
+# pod方案
+镜像导出到harbor
+使用docker:cli镜像，有docker-client，有wget，设置镜像下载的超时时间
+1、挂载主机的docker.sock 
+2、获取下载地址，从环境变量获取，
+3、开始下载镜像文件，要使用disk.img.gz ,wget -o /make_images/disk.img
+4、进入/make_images 目录，执行 docker build  镜像名称由环境变量获取
+5、docker push到镜像仓库
