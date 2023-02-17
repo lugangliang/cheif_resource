@@ -1,0 +1,46 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: "lugl-sysdisk"
+spec:
+  source:
+      registry:
+         url: docker://10.10.95.6:8443/k8s-deploy/centos:v1
+         certConfigMap: cacert
+  pvc:
+    storageClassName: csi-rbd-sc
+    volumeMode: Block
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: "20480Mi"
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: lugl-centos
+  name: lugl-centos
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm-centos
+    spec:
+      tolerations:
+      - operator: Exists
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: sysvolume
+        resources:
+          requests:
+            memory: 4096M
+      volumes:
+      - dataVolume:
+          name: lugl-sysdisk
+        name: sysvolume

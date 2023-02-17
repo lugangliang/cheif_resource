@@ -1,0 +1,47 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: lugl-windows
+  name: lugl-win10
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm-windows
+      annotations:
+        ovn.default.ovn.kubernetes.io/allow_live_migration: "true"
+        ovn.default.ovn.kubernetes.io/logical_switch: subnet1
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 10.10.158.21-node
+      tolerations:
+      - operator: Exists
+      domain:
+        cpu:
+          sockets: 1 
+          cores: 8
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: host-disk
+          interfaces:
+          - bridge: {}
+            name: ovn
+        resources:
+          requests:
+            cpu: 8
+            memory: 12400M
+      volumes:
+      - hostDisk:
+          capacity: 50Gi
+          path: /data/disk.img
+          type: DiskOrCreate
+        name: host-disk
+      networks:
+      - multus:
+          default: true
+          networkName: default/ovn
+        name: ovn

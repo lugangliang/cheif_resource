@@ -1,0 +1,66 @@
+# 使用dv创建windowsvm，此处pullMethod设置为node，configmap就不要再设置了。
+
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: "lugl-win10-sysdisk"
+spec:
+  source:
+      registry:
+         url: docker://10.10.95.6:8443/k8s-deploy/vmimage:windows10
+         pullMethod: node
+  pvc:
+    storageClassName: csi-rbd-sc
+    volumeMode: Block
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: "51200Mi"
+
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: lugl-windows
+  name: lugl-win10
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm-windows
+      annotations:
+        ovn.default.ovn.kubernetes.io/allow_live_migration: "true"
+        ovn.default.ovn.kubernetes.io/logical_switch: subnet1
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 10.10.158.22-node
+      tolerations:
+      - operator: Exists
+      domain:
+        cpu:
+          sockets: 1 
+          cores: 8
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: sysvolume
+          interfaces:
+          - bridge: {}
+            name: ovn
+        resources:
+          requests:
+            cpu: 8
+            memory: 12400M
+      volumes:
+      - dataVolume:
+          name: lugl-win10-sysdisk
+        name: sysvolume
+      networks:
+      - multus:
+          default: true
+          networkName: default/ovn
+        name: ovn
