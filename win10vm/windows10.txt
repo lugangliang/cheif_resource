@@ -1,0 +1,102 @@
+
+# win10 yaml 文件
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: lugl-windows
+  name: lugl-win10
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm-windows
+      annotations:
+        ovn.default.ovn.kubernetes.io/allow_live_migration: "true"
+        ovn.default.ovn.kubernetes.io/logical_switch: subnet1
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 10.10.158.21-node
+      tolerations:
+      - operator: Exists
+      domain:
+        cpu:
+          sockets: 1 
+          cores: 8
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: host-disk
+          interfaces:
+          - bridge: {}
+            name: ovn
+        resources:
+          requests:
+            cpu: 8
+            memory: 12400M
+      volumes:
+      - hostDisk:
+          capacity: 50Gi
+          path: /data/disk.img
+          type: DiskOrCreate
+        name: host-disk
+      networks:
+      - multus:
+          default: true
+          networkName: default/ovn
+        name: ovn
+
+# qemu 命令
+qemu-img convert -f qcow2 -O raw win10sysdisk.qcow2 win10sysdisk.raw
+qemu-img create -f qcow2 /root/lugl/win10sysdisk.qcow2 50G
+
+
+# virsh命令
+
+virsh destroy win10.localhost
+virsh undefine win10.localhost
+attach-device  win10.localhost cdrom.yaml --current
+
+virsh change-media  win10.localhost  hda /root/lugl/virtio-win-0.1.229.iso
+
+virsh change-media  win10.localhost  hda /root/lugl/cn_windows_10_multiple_editions_x64_dvd_6848463.iso
+
+# 制作win10镜像
+
+10.162.200.21 使用密钥登录
+
+切换virtio 网卡驱动 https://cloud.tencent.com/developer/article/2017450
+
+virt-install \
+    --name win10.localhost \
+    --memory 4096 \
+    --vcpus 4 \
+    --cpu host \
+    --import \
+    --disk /root/lugl/win10sysdisk.qcow2,format=qcow2,bus=virtio \
+    --disk /root/lugl/cn_windows_10_multiple_editions_x64_dvd_6848463.iso,device=cdrom \
+    --network default \
+    --graphics vnc,password=foobar,port=5910,keymap=ja,listen=0.0.0.0 \
+    --channel unix,target_type=virtio,name=org.qemu.guest_agent.0 \
+    --virt-type kvm \
+    --os-variant win10 \
+    --noautoconsole \
+    --boot cdrom
+	
+windows 默认 admin/L1bv!rt 
+	
+
+
+
+https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/
+
+
+
+选择amd/win10  
+
+
+极限压缩解压，在/run 目录下做操作，依赖pigz，yum install -y pigz 
+tar --use-compress-program=pigz -cvpf win10sysdisk.tgz win10sysdisk.qcow2
+
