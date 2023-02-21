@@ -1,0 +1,93 @@
+
+apiVersion: kubeovn.io/v1
+kind: Subnet
+metadata:
+  name: ovn-vpc-external-network
+spec:
+  cidrBlock: 10.10.97.0/24
+  default: false
+  excludeIps:
+  - 10.10.97.1..10.10.97.100
+  gateway: 10.10.97.254
+  private: false
+  provider: ovn-vpc-external-network.kube-system
+---
+apiVersion: kubeovn.io/v1
+kind: IptablesEIP
+metadata:
+  name: eip1
+spec:
+  natGwDp: vpc-gw-1
+  v4ip: 10.10.97.10
+
+---
+apiVersion: kubeovn.io/v1
+kind: IptablesSnatRule
+metadata:
+  name: snat01
+spec:
+  eip: eip1
+  internalCIDR: 172.20.1.0/24
+
+---
+apiVersion: kubeovn.io/v1
+kind: IptablesSnatRule
+metadata:
+  name: snat02
+spec:
+  eip: eip1
+  internalCIDR: 172.20.2.0/24
+
+---
+kind: VpcNatGateway
+apiVersion: kubeovn.io/v1
+metadata:
+  name: vpc-gw-1
+spec:
+  vpc: vpc-1
+  subnet: vpc-subnet-1
+  lanIp: 172.20.1.2
+  selector:
+    - "kubernetes.io/hostname: 10.10.158.21-node"
+
+apiVersion: kubeovn.io/v1
+kind: Vpc
+metadata:
+  name: vpc-1
+spec:
+  staticRoutes:
+  - cidr: 0.0.0.0/0
+    nextHopIP: 172.20.1.2
+    policy: policyDst
+
+---
+apiVersion: kubeovn.io/v1
+kind: Subnet
+metadata:
+  name: vpc-subnet-1
+spec:
+  cidrBlock: 172.20.1.0/24
+  disableGatewayCheck: true
+  excludeIps:
+  - 172.20.1.1..172.20.1.100
+  gateway: 172.20.1.1
+  natOutgoing: false
+  private: false
+  provider: ovn
+  vpc: vpc-1
+
+---
+apiVersion: kubeovn.io/v1
+kind: Subnet
+metadata:
+  name: vpc-subnet-2
+spec:
+  cidrBlock: 172.20.2.0/24
+  disableGatewayCheck: true
+  excludeIps:
+  - 172.20.2.1..172.20.2.100
+  gateway: 172.20.2.1
+  natOutgoing: false
+  private: false
+  provider: ovn.default.ovn
+  vpc: vpc-1

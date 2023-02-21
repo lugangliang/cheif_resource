@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: my-nginx
+  name: ng-subnet1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-nginx
+  template:
+    metadata:
+      annotations:
+        v1.multus-cni.io/default-network: default/ovn
+        ovn.kubernetes.io/logical_router: vpc-1
+        ovn.kubernetes.io/logical_switch: "vpc-subnet-1"
+      labels:
+        app: my-nginx
+    spec:
+      nodeSelector:
+        kubevirt: "true"
+      containers:
+      - image: onlineshop/nginx:latest
+        name: nginx-s
+        imagePullPolicy: IfNotPresent
+      tolerations:
+      - operator: Exists
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: my-nginx
+  name: ng-subnet2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-nginx
+  template:
+    metadata:
+      annotations:
+        v1.multus-cni.io/default-network: default/ovn
+        ovn.kubernetes.io/logical_router: vpc-1
+        ovn.kubernetes.io/logical_switch: "vpc-subnet-2"
+      labels:
+        app: my-nginx
+    spec:
+      nodeSelector:
+        kubevirt: "true"
+      containers:
+      - image: onlineshop/nginx:latest
+        name: nginx-s
+        imagePullPolicy: IfNotPresent
+      tolerations:
+      - operator: Exists
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: my-nginx
+  name: ng-subnet3
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-nginx
+  template:
+    metadata:
+      annotations:
+        v1.multus-cni.io/default-network: kube-system/kube-ovn-2
+        ovn.kubernetes.io/logical_router: vpc-2
+        ovn.kubernetes.io/logical_switch: "subnet3"
+      labels:
+        app: my-nginx
+    spec:
+      nodeSelector:
+        kubevirt: "true"
+      containers:
+      - image: onlineshop/nginx:latest
+        name: nginx-s
+        imagePullPolicy: IfNotPresent
+      tolerations:
+      - operator: Exists
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: my-nginx
+  name: ng-subnet4
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-nginx
+  template:
+    metadata:
+      annotations:
+        v1.multus-cni.io/default-network: kube-system/kube-ovn-2
+        ovn.kubernetes.io/logical_router: vpc-2
+        ovn.kubernetes.io/logical_switch: "subnet4"
+      labels:
+        app: my-nginx
+    spec:
+      nodeSelector:
+        kubevirt: "true"
+      containers:
+      - image: onlineshop/nginx:latest
+        name: nginx-s
+        imagePullPolicy: IfNotPresent
+      tolerations:
+      - operator: Exists
+
+

@@ -1,0 +1,42 @@
+apiVersion: kubeovn.io/v1
+kind: ProviderNetwork
+metadata:
+  name: net1
+spec:
+  defaultInterface: bond0
+  excludeNodes:
+  - 10.10.158.11-node
+  - 10.10.95.11-master
+  - 10.10.95.12-node
+  - 10.10.95.13-node
+  - 10.10.95.14-node
+---
+apiVersion: kubeovn.io/v1
+kind: Vlan
+metadata:
+  name: vlan96
+spec:
+  id: 96
+  provider: net1
+#---
+#
+#apiVersion: kubeovn.io/v1
+#kind: Subnet
+#metadata:
+#  name: subnet1
+#spec:
+#  protocol: IPv4
+#  cidrBlock: 10.10.96.0/24
+#  disableGatewayCheck: true
+#  gateway: 10.10.96.254
+#  vlan: vlan96
+#  excludeIps:
+#  - 10.10.96.250..10.10.96.254
+#  - 10.10.96.1..10.10.96.3
+#  namespaces:
+#  - default
+#  - wj-deploy-singer-cluster-vm
+#
+#
+#
+#

@@ -1,0 +1,56 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: "ovn9-sysdisk"
+spec:
+  source:
+      registry:
+         url: docker://10.10.95.6:8443/k8s-deploy/cirros-container-disk-demo:v1
+         certConfigMap: cacert
+  pvc:
+    storageClassName: csi-rbd-sc
+    volumeMode: Block
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: "2048Mi"
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ovn-vm9
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/size: small
+        kubevirt.io/domain: ovn-vm9
+    spec:
+      tolerations:
+      - operator: Exists
+      nodeSelector:
+        kubevirt: "true"
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: sysvolume
+          interfaces:
+          - name: multus
+            bridge: {}
+        resources:
+          requests:
+            memory: 4096M
+            cpu: 4
+      networks:
+      - name: multus
+        multus:
+          default: true
+          networkName: kube-system/kube-ovn-2
+      volumes:
+      - dataVolume:
+          name: ovn9-sysdisk
+        name: sysvolume

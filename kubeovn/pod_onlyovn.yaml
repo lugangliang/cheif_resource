@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    v1.multus-cni.io/default-network: kube-system/kube-ovn-2
+  name: only-kubeovn
+spec:
+  containers:
+  - image: onlineshop/nginx:latest
+    name: only-kubeovn
+  nodeSelector:
+    kubernetes.io/hostname: 10.10.158.21-node
+  tolerations:
+  - operator: Exists

@@ -1,0 +1,46 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstanceReplicaSet
+metadata:
+  name: batch-vm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      myvm: myvm
+  template:
+    metadata:
+      labels:
+        kubevirt.io/size: small
+        kubevirt.io/domain: ovn-vm9
+        myvm: myvm
+    spec:
+      tolerations:
+      - operator: Exists
+      dnsConfig:
+        nameservers:
+        - 114.114.114.114
+      dnsPolicy: None
+      nodeSelector:
+        kubevirt: "true"
+      domain:
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: sysvolume
+          interfaces:
+          - name: multus
+            bridge: {}
+        resources:
+          requests:
+            memory: 4096M
+            cpu: 4
+      networks:
+      - name: multus
+        multus:
+          default: true
+          networkName: kube-system/kube-ovn-2
+      volumes:
+      - name: sysvolume
+        containerDisk:
+          image: k8s-deploy/cirros-container-disk-demo:v1
