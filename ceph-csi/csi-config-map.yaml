@@ -1,0 +1,39 @@
+---
+# This is a sample configmap that helps define a Ceph configuration as required
+# by the CSI plugins.
+
+# Sample ceph.conf available at
+# https://github.com/ceph/ceph/blob/master/src/sample.ceph.conf Detailed
+# documentation is available at
+# https://docs.ceph.com/en/latest/rados/configuration/ceph-conf/
+apiVersion: v1
+kind: ConfigMap
+data:
+  ceph.conf: |
+    [global]
+    auth_cluster_required = cephx
+    auth_service_required = cephx
+    auth_client_required = cephx
+  # keyring is a required key and its value should be empty
+  keyring: |
+metadata:
+  name: ceph-config
+  namespace: kube-system
+[root@10 csi_ceph]# cat csi-config-map.yaml 
+apiVersion: v1
+kind: ConfigMap
+data:
+  config.json: |-
+    [
+      {
+        "clusterID": "8dfdf396-8101-11ed-9110-f80f6f89d2e9",
+        "monitors": [
+          "10.162.200.1:6789",
+          "10.162.200.2:6789",
+          "10.162.200.3:6789"
+        ]
+      }
+    ]
+metadata:
+  name: ceph-csi-config
+  namespace: kube-system

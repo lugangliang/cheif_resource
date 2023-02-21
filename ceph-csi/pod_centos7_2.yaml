@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rbd-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: csi-rbd-sc
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ceph-pod3
+spec:
+  nodeSelector:
+    ceph: ceph
+  containers:
+  - name: ceph-busybox
+    image: k8s-deploy/centos:7
+    command: ["sleep", "60000"]
+    volumeMounts:
+      - name: mypvc
+        mountPath: /var/lib/www/html
+  volumes:
+  - name: mypvc
+    persistentVolumeClaim:
+      claimName: rbd-pvc
+
+

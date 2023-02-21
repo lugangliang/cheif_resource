@@ -1,0 +1,31 @@
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    storageLimit: "10240"
+    storageUsed: "0"
+    type: CEPH-RBD
+  name: csi-rbd-sc
+mountOptions:
+- discard
+parameters:
+  clusterID: 8dfdf396-8101-11ed-9110-f80f6f89d2e9
+  csi.storage.k8s.io/node-stage-secret-name: csi-rbd-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: kube-system
+  csi.storage.k8s.io/provisioner-secret-name: csi-rbd-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: kube-system
+  imageFeatures: layering
+  pool: kubernetes-dev
+  adminId: admin
+  adminSecretName: csi-rbd-secret
+  adminSecretNamespace: kube-system
+  imageFormat: "2"
+  monitors: ceph-mon-rbd-test-0.kube-system.svc.cluster.local.:6789,ceph-mon-rbd-test-1.kube-system.svc.cluster.local.:6789,ceph-mon-rbd-test-2.kube-system.svc.cluster.local.:6789
+  userId: kubernetes
+  userSecretName: csi-rbd-secret
+  userSecretNamespace: kube-system
+provisioner: rbd.csi.ceph.com
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer 
+

@@ -1,0 +1,9 @@
+对接ceph的csi插件的yaml文件。
+pod_centos7_2.yaml pod使用pvc用于验证
+raw-block-pvc.yaml 验证创建pvc
+
+
+ceph 官方文档 https://docs.ceph.com/en/quincy/
+
+
+ceph对接k8s 官方文档 https://docs.ceph.com/en/quincy/rbd/rbd-kubernetes/
