@@ -1,0 +1,51 @@
+
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: lugl-centos76
+  name: lugl-centos76
+spec:
+  running: true
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 10.10.158.21-node
+      tolerations:
+        - operator: Exists
+      domain:
+        cpu:
+          sockets: 1
+          cores: 8
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: host-disk
+            - cdrom:
+                bus: sata
+                readonly: false
+              name: iso
+              bootOrder: 1
+          interfaces:
+            - bridge: {}
+              name: ovn
+        resources:
+          requests:
+            cpu: 8
+            memory: 12400M
+      volumes:
+        - hostDisk:
+            capacity: 20Gi
+            path: /data/centos76.img
+            type: DiskOrCreate
+          name: host-disk
+        - hostDisk:
+            path: /data/CentOS-7-x86_64-Minimal-1810.iso
+            type: DiskOrCreate
+          name: iso
+      networks:
+        - multus:
+            default: true
+            networkName: default/ovn
+          name: ovn
