@@ -75,6 +75,7 @@ virt-install \
     --vcpus 4 \
     --cpu host \
     --import \
+    --os-type windows \
     --disk /root/lugl/win10sysdisk.qcow2,format=qcow2,bus=virtio \
     --disk /root/lugl/cn_windows_10_multiple_editions_x64_dvd_6848463.iso,device=cdrom \
     --network default \
@@ -86,17 +87,76 @@ virt-install \
     --boot cdrom
 	
 windows 默认 admin/L1bv!rt 
-	
-
-
 
 https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/
 
-
-
 选择amd/win10  
-
 
 极限压缩解压，在/run 目录下做操作，依赖pigz，yum install -y pigz 
 tar --use-compress-program=pigz -cvpf win10sysdisk.tgz win10sysdisk.qcow2
+
+20230228  最新进展
+
+qemu-img create -f qcow2 /data/win10sysdisk.qcow2 50G
+
+
+docker pull centos:7.6.18018
+yum install virt-install qemu-kvm libvirt
+
+docker run -d --name lugl-makesysimage --privileged  --mount type=bind,source=/data/,target=/data --network host --rm  centos:7.6.1810 /usr/sbin/init
+
+usermod -G root qemu
+
+systemctl restart libvirtd
+
+mkdir -p /sys/fs/cgroup/cpuset/system.slice/docker-e27be1f11c8a229ffecd60b8711e50adbe82edab7dd11fa32b780fc20bae7bf8.scope/
+
+
+
+virsh change-media  xxx  hda /data/virtio-win-0.1.229.iso
+virsh change-media  xxx  hda /data/Windows10.iso
+
+
+virt-install --name xxx --memory 4096 --vcpus 4 --cpu host --import --disk /data/win10sysdisk.qcow2,format=qcow2,bus=virtio --os-type=windows \
+--network default --graphics vnc,password=foobar,port=5910,keymap=ja,listen=0.0.0.0 --channel unix,target_type=virtio,name=org.qemu.guest_agent.0 \
+--disk /data/Windows10.iso,device=cdrom  --virt-type kvm  --noautoconsole --boot cdrom
+
+
+创建数据盘 virtio scsi
+
+virt-install --name xxx --memory 4096 --vcpus 4 --cpu host --import --disk /data/win10sysdisk.qcow2,format=qcow2,bus=virtio --os-type=windows \
+--network network=default,model=virtio --graphics vnc,password=foobar,port=5910,keymap=ja,listen=0.0.0.0 --channel unix,target_type=virtio,name=org.qemu.guest_agent.0 \
+--disk /data/virtio-win-0.1.229.iso,device=cdrom  --virt-type kvm  --noautoconsole --boot hd
+
+## machine的选型？要区分windows和linux redhet等等。看看如何配置
+
+
+安装网卡驱动
+
+
+挂载数据盘 scsi
+qemu-img create -f qcow2 /data/data.qcow2 10G
+virsh attach-disk  xxx /data/data.qcow2 sda --live --driver qemu --subdriver qcow2      --targetbus scsi --type disk
+
+virsh detach-disk xxx sda
+
+
+qemu-img convert  -f qcow2 -O raw /data/win10sysdisk.qcow2 /data/disk.img
+
+
+网络访问 ：
+iptables -t nat -A PREROUTING -p tcp --dport 5910 -j DNAT --to-destination 64.64.64.3:5910
+iptables -L PREROUTING -t nat  -n --line-number
+iptables -t nat  -D PREROUTING  5
+
+
+磁盘挂载
+virtctl-v0.57.1-linux-amd64 addvolume lugl-win10 --volume-name win10-data
+virtctl-v0.57.1-linux-amd64 removevolume lugl-win10 --volume-name win10-data
+
+
+
+
+docker build -t 10.10.95.6:8443/k8s-deploy/vmimage:windows10 .
+
 
