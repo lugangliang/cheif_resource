@@ -1,0 +1,11 @@
+# 安全组的定义，在kubevirt中使用时，动态生效需要变更到pod上，
+# 为了达到虚机重启继续生效的目的，vm的资源对象也需要更新
+kind: SecurityGroup
+metadata:
+  name: sg1
+spec:
+  ingressRules:
+    - ipVersion: ipv4
+      policy: deny
+      protocol: icmp
+      remoteAddress: 0.0.0.0/0
